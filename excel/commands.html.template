@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<!-- The function file the manifest requires for the ribbon. The button only opens the task pane, so nothing runs here. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>__TOOL_NAME__</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<script>Office.onReady(function () {});</script>
+</head>
+<body></body>
+</html>

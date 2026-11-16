@@ -1,49 +1,32 @@
-# Placeholders Reference
+# Placeholders
 
-Replace these placeholders in all template files when setting up a new tool's Office add-ins.
+Replace these in every `.template` file, then drop the `.template` suffix.
 
-## Placeholders
-
-| Placeholder | Description | Example (model-diff) | Example (recon) |
+| Placeholder | Meaning | Example (model-diff) | Example (recon) |
 |---|---|---|---|
-| `__TOOL_NAME__` | Display name | Yoraito Model Diff | Yoraito Recon |
-| `__TOOL_NAME_LOWER__` | Lowercase, hyphenated | yoraito-model-diff | yoraito-recon |
-| `__TOOL_DESCRIPTION__` | Short description | Diff two Excel models | Reconcile transactions |
-| `__PORT__` | Default port | 17842 | 17843 |
-| `__API_ENDPOINT__` | Main API endpoint | /api/diff | /api/match |
-| `__CLI_COMMAND__` | CLI command name | yoraito-model-diff | yoraito-recon |
-| `__FILE_ACCEPT__` | File types | .xlsx,.csv | .csv,.xlsx,.pdf |
-| `__MENU_ACTION__` | Sheets menu action | Compare Models | Run Reconciliation |
-| `__ADDIN_ID__` | Unique GUID for manifest | (generate new) | (generate new) |
+| `__TOOL_NAME__` | Display name | `Yoraito Model Diff` | `Yoraito Recon` |
+| `__TOOL_ID__` | Lowercase and hyphenated, as in the tool's repository name | `yoraito-model-diff` | `yoraito-recon` |
+| `__TOOL_DESCRIPTION__` | One short sentence, without a full stop (the task pane adds one) | `Compare this workbook with another version` | `Reconcile this workbook against a statement` |
+| `__PORT__` | The tool's local web app (http), for the Google Sheets link | `17842` | `17843` |
+| `__ADDIN_PORT__` | The HTTPS port where the tool serves the Excel add-in and its API | `17852` | `17853` |
+| `__API_ENDPOINT__` | The route the task pane POSTs to: the workbook as `workbook`, and a picked file as `file` | `/api/diff` | `/api/match` |
+| `__ACTION_LABEL__` | The task pane's button | `Compare with another file` | `Run reconciliation` |
+| `__NEEDS_FILE__` | `true` if the action also needs a file the user picks, else `false` | `true` | `true` |
+| `__FILE_ACCEPT__` | File types for that picker | `.xlsx` | `.csv,.xlsx,.pdf` |
+| `__ADDIN_ID__` | A new GUID for the add-in, e.g. from PowerShell `[guid]::NewGuid()` | (generate) | (generate) |
 
-## Files to Update
+## Files
 
-1. `excel/manifest.xml.template` → `excel/manifest.xml`
-2. `excel/addin.html.template` → `excel/addin.html`
-3. `sheets/Code.gs.template` → `sheets/Code.gs`
+| Template | Becomes | Served at |
+|---|---|---|
+| `excel/manifest.xml.template` | `manifest.xml` | not served: it's what Excel loads (see [docs/SIDELOADING.md](docs/SIDELOADING.md)) |
+| `excel/taskpane.html.template` | `taskpane.html` | `https://localhost:__ADDIN_PORT__/addins/excel/taskpane.html` |
+| `excel/commands.html.template` | `commands.html` | `https://localhost:__ADDIN_PORT__/addins/excel/commands.html` |
+| `excel/assets/icon-*.png` | as they are, or the tool's own icons in the same sizes | `https://localhost:__ADDIN_PORT__/addins/excel/assets/` |
+| `sheets/Code.gs.template` | `Code.gs` | pasted into the sheet's Apps Script |
 
-## Steps
+## The tool's side
 
-1. Copy this template into your tool's `addins/` directory
-2. Replace all placeholders in all files
-3. Rename `.template` files (remove `.template` suffix)
-4. For Excel: Sideload `manifest.xml` in Excel
-5. For Sheets: Copy `Code.gs` into Apps Script
-
-## Sideloading (Excel)
-
-1. Start the local server: `yoraito-<tool>-web`
-2. Excel → Insert → My Add-ins → Upload My Add-in
-3. Select `manifest.xml`
-4. Click the add-in button in the ribbon
-
-## Google Sheets (Apps Script)
-
-1. Open your Google Sheet
-2. Extensions → Apps Script
-3. Paste `Code.gs` content
-4. Save and refresh
-5. Use the menu: `__TOOL_NAME__` → `__MENU_ACTION__`
-
-Note: Google Sheets add-ons run on Google's servers and cannot reach localhost.
-The add-on opens the local web app in a new browser tab for the actual processing.
+- **Answer `GET /api/health`** on the add-in origin; the task pane checks it.
+- **Answer `__API_ENDPOINT__`** with JSON. `message` is shown to the user; `url` (optional, relative) is where the "Open" link points; `detail` is shown on errors.
+- **If the API needs yoraito-core's install key**, serve `taskpane.html` with the key in its `yoraito-key` meta tag. The page sends it as `X-Yoraito-Key`.

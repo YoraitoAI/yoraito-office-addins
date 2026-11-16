@@ -1,42 +1,17 @@
-# Publishing Guide
+# Publishing
 
-## Excel (Microsoft AppSource)
+## Excel
 
-### Requirements
-- HTTPS hosting for the add-in HTML (GitHub Pages, Vercel, Cloudflare)
-- Updated manifest.xml with HTTPS SourceLocation
-- Microsoft Partner Center account
+**Firms (recommended):** a firm's Microsoft 365 admin deploys the manifest to its users from the admin center (Settings > Integrated apps). Nothing is published; the add-in still needs the tool running on each computer and the HTTPS setup in [SIDELOADING.md](SIDELOADING.md).
 
-### Steps
-1. Host `addin.html` on an HTTPS endpoint
-2. Update `manifest.xml` SourceLocation to HTTPS URL
-3. Go to https://partner.microsoft.com
-4. Create a new Office Add-in submission
-5. Upload the manifest.xml
-6. Submit for review (2-4 weeks)
+**Microsoft AppSource:** needs the add-in's pages on a public HTTPS host, a Microsoft Partner Center account, and an add-in that works for the reviewers. An add-in that only works with a program running on the user's computer has to say so clearly and may not pass review. To submit:
 
-### Notes
-- AppSource review checks for security, performance, and UX
-- The add-in must work without the local server (or clearly state the dependency)
-- For our use case (local server required), sideloading is the primary distribution
+1. Host the `excel/` files on an HTTPS site and change every `https://localhost:<ADDIN_PORT>` URL in `manifest.xml` to that site.
+2. Decide how the hosted page reaches the tool on the user's computer (CORS on the tool, and the browser's local-network rules), and test it.
+3. Submit the manifest in Partner Center (https://partner.microsoft.com) as an Office add-in.
 
-## Google Sheets (Google Workspace Marketplace)
+## Google Sheets
 
-### Requirements
-- Google Cloud project
-- OAuth consent screen configured
-- Apps Script project published
+Publishing to the Google Workspace Marketplace needs a Google Cloud project, an OAuth consent screen and an Apps Script deployment of type "Add-on", followed by Google's review.
 
-### Steps
-1. Go to https://console.cloud.google.com
-2. Create a new project
-3. Enable Google Sheets API
-4. Configure OAuth consent screen
-5. Go to Apps Script → Deploy → New deployment
-6. Select "Add-on" type
-7. Submit to Marketplace (1-2 weeks review)
-
-### Notes
-- Google Workspace Marketplace review checks for security and functionality
-- Apps Script add-ons run on Google's servers
-- For our use case (local processing), the add-on is a launcher, not a full integration
+The script here is a launcher: a menu item that shows a link to the tool on the user's computer. Sharing the script with each firm (or pasting it per sheet, as in [SIDELOADING.md](SIDELOADING.md)) is enough until there's a reason to publish it.

@@ -1,60 +1,29 @@
 /**
- * __TOOL_NAME__ Google Sheets Add-on
+ * __TOOL_NAME__ for Google Sheets: a menu item that opens __TOOL_NAME__ on the user's computer.
  *
- * Installation:
- * 1. Open your Google Sheet
- * 2. Go to Extensions > Apps Script
- * 3. Paste this code
- * 4. Save and refresh the sheet
- * 5. Use menu: __TOOL_NAME__ > __MENU_ACTION__
+ * Apps Script runs on Google's servers, so it can't reach the user's computer: "localhost" there is Google's own
+ * machine. This script therefore never calls the local app. It shows a link; the user clicks it, and their own
+ * browser opens __TOOL_NAME__. To use this sheet's data there, the user downloads it as .xlsx first.
  *
- * Note: This add-on runs on Google's servers. For fully local processing,
- * export your sheet as xlsx and use the web app at http://localhost:__PORT__
+ * Install: in the sheet, Extensions > Apps Script, paste this file, save, then reload the sheet.
  */
 
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('__TOOL_NAME__')
-    .addItem('__MENU_ACTION__', 'runAction')
-    .addItem('Check Server Status', 'checkServer')
+    .addItem('Open __TOOL_NAME__', 'openTool')
     .addToUi();
 }
 
-function checkServer() {
-  const ui = SpreadsheetApp.getUi();
-  try {
-    const response = UrlFetchApp.fetch('http://localhost:__PORT__/api/health', {
-      muteHttpExceptions: true
-    });
-    if (response.getResponseCode() === 200) {
-      ui.alert('Server Status: Online\n\n__TOOL_NAME__ server is running on localhost:__PORT__');
-    } else {
-      throw new Error('Server not responding');
-    }
-  } catch (e) {
-    ui.alert('Server Status: Offline\n\nPlease start the server:\n  __CLI_COMMAND__-web\n\nOr use the web app directly at http://localhost:__PORT__');
-  }
-}
-
-function runAction() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const url = ss.getUrl();
-
-  // Check server
-  try {
-    UrlFetchApp.fetch('http://localhost:__PORT__/api/health', { muteHttpExceptions: true });
-  } catch (e) {
-    ui.alert('Server not running.\n\nPlease start: __CLI_COMMAND__-web\nThen try again.\n\nAlternatively, export your sheet as xlsx and use the web app directly.');
-    return;
-  }
-
-  // Open the local web app with the sheet URL
-  const webUrl = 'http://localhost:__PORT__?sheet_url=' + encodeURIComponent(url);
-  const html = HtmlService.createHtmlOutput(
-    '<script>window.open("' + webUrl + '", "_blank");</script>' +
-    '<p>Opening __TOOL_NAME__...</p>' +
-    '<p>If nothing happens, visit: <a href="' + webUrl + '" target="_blank">' + webUrl + '</a></p>'
-  );
-  ui.showModalDialog(html, 'Opening __TOOL_NAME__...');
+function openTool() {
+  var url = 'http://localhost:__PORT__/';
+  var html = HtmlService.createHtmlOutput(
+    '<div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5">' +
+      '<p>__TOOL_NAME__ runs on your computer. Start it, then open it here:</p>' +
+      '<p><a href="' + url + '" target="_blank" rel="noopener">Open __TOOL_NAME__</a></p>' +
+      '<p style="color: #555">To work on this sheet there, download it first: ' +
+      'File &gt; Download &gt; Microsoft Excel (.xlsx).</p>' +
+    '</div>'
+  ).setWidth(380).setHeight(180);
+  SpreadsheetApp.getUi().showModalDialog(html, '__TOOL_NAME__');
 }

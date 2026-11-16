@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<!--
+  The task pane of a Yoraito tool's Excel add-in. The tool serves this page itself, at
+  https://localhost:__ADDIN_PORT__/addins/excel/taskpane.html, so every request below goes to the same origin.
+
+  If the tool's API needs yoraito-core's install key (LocalGuard), the tool puts the key in the yoraito-key meta tag
+  when it serves this page. A page served by the tool can't be read by other websites, so the key stays local.
+  Tools without a key leave the tag empty.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="yoraito-key" content="">
+<title>__TOOL_NAME__</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  body { font-family: "Segoe UI", system-ui, sans-serif; padding: 15px; margin: 0; color: #1f2a44; }
+  h2 { color: #4361ee; font-size: 1.2rem; margin: 0 0 6px; }
+  .lead { font-size: 0.85rem; color: #5b6784; margin: 0 0 14px; }
+  .btn { background: #4361ee; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer;
+         margin: 6px 0; width: 100%; font-size: 0.95rem; }
+  .btn:hover { background: #3a56d4; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .status { margin: 10px 0; padding: 10px; border-radius: 6px; font-size: 0.9rem; }
+  .status.info { background: #e7f3ff; color: #004085; }
+  .status.error { background: #f8d7da; color: #721c24; }
+  .status.success { background: #d4edda; color: #155724; }
+  .status.warning { background: #fff3cd; color: #856404; }
+  label { display: block; font-size: 0.9rem; margin-top: 10px; }
+  input[type="file"] { margin: 6px 0; width: 100%; }
+  .link { display: block; text-align: center; margin: 12px 0; color: #4361ee; font-weight: 600; }
+</style>
+</head>
+<!-- data-endpoint: where the workbook is POSTed. data-needs-file: "true" when the action also needs a file the user
+     picks (sent as "file"). -->
+<body data-endpoint="__API_ENDPOINT__" data-needs-file="__NEEDS_FILE__">
+  <h2>__TOOL_NAME__</h2>
+  <p class="lead">__TOOL_DESCRIPTION__. The workbook goes only to __TOOL_NAME__ on this computer. Excel loads its add-in
+    library (office.js) from Microsoft.</p>
+
+  <div id="status" class="status info" role="status">Checking for __TOOL_NAME__ on this computer...</div>
+
+  <div id="file-picker" hidden>
+    <label for="file">The other file
+      <input type="file" id="file" accept="__FILE_ACCEPT__">
+    </label>
+  </div>
+
+  <button class="btn" id="run" disabled>__ACTION_LABEL__</button>
+  <a id="open" class="link" href="/" target="_blank" rel="noopener" hidden>Open __TOOL_NAME__</a>
+
+  <script>
+    "use strict";
+    const endpoint = document.body.dataset.endpoint;
+    const needsFile = document.body.dataset.needsFile === "true";
+    const key = (document.querySelector('meta[name="yoraito-key"]') || {}).content || "";
+    const statusBox = document.getElementById("status");
+    const runButton = document.getElementById("run");
+
+    function show(text, kind) {
+      statusBox.textContent = text;
+      statusBox.className = "status " + kind;
+    }
+
+    function headers() {
+      return key ? { "X-Yoraito-Key": key } : {};
+    }
+
+    async function checkTool() {
+      try {
+        const resp = await fetch("/api/health", { headers: headers() });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        show("Ready.", "info");
+        runButton.disabled = false;
+      } catch (e) {
+        show("__TOOL_NAME__ isn't answering. Start it, then close and reopen this pane.", "warning");
+      }
+    }
+
+    // The open workbook as an .xlsx file, read in slices (Office.js only hands it over that way).
+    function readWorkbook() {
+      return new Promise((resolve, reject) => {
+        Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 65536 }, (result) => {
+          if (result.status !== Office.AsyncResultStatus.Succeeded) {
+            reject(new Error(result.error ? result.error.message : "Excel didn't hand over the workbook."));
+            return;
+          }
+          const file = result.value;
+          const slices = [];
+          const next = (index) => {
+            file.getSliceAsync(index, (slice) => {
+              if (slice.status !== Office.AsyncResultStatus.Succeeded) {
+                file.closeAsync();
+                reject(new Error("Excel stopped while handing over the workbook."));
+                return;
+              }
+              slices.push(new Uint8Array(slice.value.data));
+              if (index + 1 < file.sliceCount) {
+                next(index + 1);
+              } else {
+                file.closeAsync();
+                resolve(new Blob(slices, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+              }
+            });
+          };
+          next(0);
+        });
+      });
+    }
+
+    async function run() {
+      const picked = document.getElementById("file").files[0];
+      if (needsFile && !picked) {
+        show("Choose the other file first.", "warning");
+        return;
+      }
+      runButton.disabled = true;
+      show("Reading the workbook...", "info");
+      try {
+        const body = new FormData();
+        body.append("workbook", await readWorkbook(), "workbook.xlsx");
+        if (needsFile) body.append("file", picked);
+        show("Working...", "info");
+        const resp = await fetch(endpoint, { method: "POST", headers: headers(), body });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.detail || data.message || "HTTP " + resp.status);
+        show(data.message || "Done.", "success");
+        const open = document.getElementById("open");
+        open.href = data.url || "/";
+        open.hidden = false;
+      } catch (e) {
+        show("Didn't work: " + e.message, "error");
+      } finally {
+        runButton.disabled = false;
+      }
+    }
+
+    Office.onReady(() => {
+      document.getElementById("file-picker").hidden = !needsFile;
+      runButton.addEventListener("click", run);
+      checkTool();
+    });
+  </script>
+</body>
+</html>
