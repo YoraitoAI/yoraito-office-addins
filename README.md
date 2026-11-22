@@ -29,3 +29,7 @@ See [docs/PUBLISHING.md](docs/PUBLISHING.md). For firms, a Microsoft 365 admin c
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+## Yoraito Core
+
+No core code belongs in this template. Document the add-in contract against `yoraito_core.localapi` and `yoraito_core.installkey` so a tool serves the pane consistently. See `yoraito-core/docs/ADOPTION.md` and `docs/GENERICITY.md`.
