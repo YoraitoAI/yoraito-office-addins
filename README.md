@@ -33,3 +33,5 @@ MIT, see [LICENSE](LICENSE).
 ## Yoraito Core
 
 No core code belongs in this template. Document the add-in contract against `yoraito_core.localapi` and `yoraito_core.installkey` so a tool serves the pane consistently. See `yoraito-core/docs/ADOPTION.md` and `docs/GENERICITY.md`.
+
+See [docs/CORE-CONTRACT.md](docs/CORE-CONTRACT.md) for the contract a tool must provide.
